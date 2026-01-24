@@ -22,7 +22,7 @@ export default auth((req) => {
 
   // Check if this is a public route
   const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname.startsWith(route),
   );
 
   // Allow public routes with CORS headers for API
@@ -56,11 +56,11 @@ export default auth((req) => {
     response.headers.set("Access-Control-Allow-Origin", "*");
     response.headers.set(
       "Access-Control-Allow-Methods",
-      "GET, POST, PUT, DELETE, OPTIONS"
+      "GET, POST, PUT, DELETE, OPTIONS",
     );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
+      "Content-Type, Authorization",
     );
   }
 

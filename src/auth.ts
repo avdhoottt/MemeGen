@@ -9,8 +9,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // Check if password matches
-        if (credentials?.password === process.env.AUTH_PASSWORD) {
+        // Check if password matches any valid password
+        const validPasswords = [
+          process.env.AUTH_PASSWORD,
+          process.env.AUTH_PASSWORD_2,
+        ].filter(Boolean);
+
+        if (
+          credentials?.password &&
+          validPasswords.includes(credentials.password as string)
+        ) {
           return {
             id: "1",
             name: "Admin",
