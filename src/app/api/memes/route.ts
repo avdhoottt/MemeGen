@@ -10,7 +10,7 @@ const supabase = createClient(
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
-// Fire-and-forget: save post to Notion as "Inspiration"
+// Fire-and-forget: save post to Notion Inspiration Posts DB
 async function syncToNotion(memeData: {
   text: string | null;
   url: string;
@@ -20,7 +20,6 @@ async function syncToNotion(memeData: {
   retweets: number;
   views: number;
   comments: number;
-  bookmarks: number;
 }) {
   if (!NOTION_API_KEY || !NOTION_DATABASE_ID) {
     console.warn("Notion sync skipped: missing NOTION_API_KEY or NOTION_DATABASE_ID");
@@ -34,7 +33,7 @@ async function syncToNotion(memeData: {
     };
 
     const properties: Record<string, unknown> = {
-      Post: {
+      "Post Text": {
         title: [
           {
             text: {
@@ -42,15 +41,6 @@ async function syncToNotion(memeData: {
             },
           },
         ],
-      },
-      "URL": {
-        url: memeData.url,
-      },
-      Platform: {
-        select: { name: platformMap[memeData.platform] || "X" },
-      },
-      Status: {
-        select: { name: "Inspiration" },
       },
       Author: {
         rich_text: [
@@ -61,12 +51,17 @@ async function syncToNotion(memeData: {
           },
         ],
       },
+      Platform: {
+        select: { name: platformMap[memeData.platform] || "X" },
+      },
+      URL: {
+        url: memeData.url,
+      },
       Likes: { number: memeData.likes },
       Retweets: { number: memeData.retweets },
       Views: { number: memeData.views },
       Comments: { number: memeData.comments },
-      Bookmarks: { number: memeData.bookmarks },
-      "Date Posted": {
+      "Saved At": {
         date: { start: new Date().toISOString().split("T")[0] },
       },
     };
@@ -174,7 +169,6 @@ export async function POST(request: NextRequest) {
       retweets,
       views,
       comments,
-      bookmarks,
     }).catch((e) => console.error("Notion background sync failed:", e));
 
     console.log("Saved meme:", data);
