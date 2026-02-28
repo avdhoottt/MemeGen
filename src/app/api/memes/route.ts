@@ -107,12 +107,23 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
+// Cap metric to a safe range (prevent scraping bugs sending absurd numbers)
+function safeMetric(val: unknown): number {
+  const n = Number(val) || 0;
+  return Math.min(Math.max(n, 0), Number.MAX_SAFE_INTEGER);
+}
+
 // POST: Collect a new meme from extension
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("Received meme data:", body);
-    const { text, images, author, url, platform, likes, retweets, views, comments, bookmarks } = body;
+    const { text, images, author, url, platform } = body;
+    const likes = safeMetric(body.likes);
+    const retweets = safeMetric(body.retweets);
+    const views = safeMetric(body.views);
+    const comments = safeMetric(body.comments);
+    const bookmarks = safeMetric(body.bookmarks);
 
     if (!url) {
       return NextResponse.json(
@@ -131,11 +142,11 @@ export async function POST(request: NextRequest) {
           images: images || [],
           author: author || null,
           platform: platform || "twitter",
-          likes: likes || 0,
-          retweets: retweets || 0,
-          views: views || 0,
-          comments: comments || 0,
-          bookmarks: bookmarks || 0,
+          likes,
+          retweets,
+          views,
+          comments,
+          bookmarks,
           collected_at: new Date().toISOString(),
         },
         {
@@ -159,11 +170,11 @@ export async function POST(request: NextRequest) {
       url,
       author,
       platform,
-      likes: likes || 0,
-      retweets: retweets || 0,
-      views: views || 0,
-      comments: comments || 0,
-      bookmarks: bookmarks || 0,
+      likes,
+      retweets,
+      views,
+      comments,
+      bookmarks,
     }).catch((e) => console.error("Notion background sync failed:", e));
 
     console.log("Saved meme:", data);
