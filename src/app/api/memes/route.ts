@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
 );
 
 // Notion config — uses direct fetch, no SDK needed
@@ -22,7 +22,9 @@ async function syncToNotion(memeData: {
   comments: number;
 }) {
   if (!NOTION_API_KEY || !NOTION_DATABASE_ID) {
-    console.warn("Notion sync skipped: missing NOTION_API_KEY or NOTION_DATABASE_ID");
+    console.warn(
+      "Notion sync skipped: missing NOTION_API_KEY or NOTION_DATABASE_ID",
+    );
     return;
   }
 
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (!url) {
       return NextResponse.json(
         { success: false, error: "URL is required" },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: corsHeaders },
       );
     }
 
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
         },
         {
           onConflict: "url",
-        }
+        },
       )
       .select()
       .single();
@@ -155,7 +157,7 @@ export async function POST(request: NextRequest) {
       console.error("Supabase error:", error);
       return NextResponse.json(
         { success: false, error: error.message },
-        { status: 500, headers: corsHeaders }
+        { status: 500, headers: corsHeaders },
       );
     }
 
@@ -174,13 +176,13 @@ export async function POST(request: NextRequest) {
     console.log("Saved meme:", data);
     return NextResponse.json(
       { success: true, meme: data },
-      { headers: corsHeaders }
+      { headers: corsHeaders },
     );
   } catch (error) {
     console.error("Collect error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to collect meme" },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: corsHeaders },
     );
   }
 }
@@ -210,7 +212,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       return NextResponse.json(
         { success: false, error: error.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -219,7 +221,7 @@ export async function GET(request: NextRequest) {
     console.error("Get memes error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to get memes" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
