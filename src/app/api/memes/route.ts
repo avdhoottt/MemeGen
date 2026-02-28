@@ -6,6 +6,95 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!
 );
 
+// Notion config — uses direct fetch, no SDK needed
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
+const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+
+// Fire-and-forget: save post to Notion as "Inspiration"
+async function syncToNotion(memeData: {
+  text: string | null;
+  url: string;
+  author: string | null;
+  platform: string;
+  likes: number;
+  retweets: number;
+  views: number;
+  comments: number;
+  bookmarks: number;
+}) {
+  if (!NOTION_API_KEY || !NOTION_DATABASE_ID) {
+    console.warn("Notion sync skipped: missing NOTION_API_KEY or NOTION_DATABASE_ID");
+    return;
+  }
+
+  try {
+    const platformMap: Record<string, string> = {
+      twitter: "X",
+      linkedin: "LinkedIn",
+    };
+
+    const properties: Record<string, unknown> = {
+      Post: {
+        title: [
+          {
+            text: {
+              content: (memeData.text || "Untitled post").substring(0, 2000),
+            },
+          },
+        ],
+      },
+      "URL": {
+        url: memeData.url,
+      },
+      Platform: {
+        select: { name: platformMap[memeData.platform] || "X" },
+      },
+      Status: {
+        select: { name: "Inspiration" },
+      },
+      Author: {
+        rich_text: [
+          {
+            text: {
+              content: (memeData.author || "Unknown").substring(0, 200),
+            },
+          },
+        ],
+      },
+      Likes: { number: memeData.likes },
+      Retweets: { number: memeData.retweets },
+      Views: { number: memeData.views },
+      Comments: { number: memeData.comments },
+      Bookmarks: { number: memeData.bookmarks },
+      "Date Posted": {
+        date: { start: new Date().toISOString().split("T")[0] },
+      },
+    };
+
+    const response = await fetch("https://api.notion.com/v1/pages", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${NOTION_API_KEY}`,
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28",
+      },
+      body: JSON.stringify({
+        parent: { database_id: NOTION_DATABASE_ID },
+        properties,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Notion sync failed:", err);
+    } else {
+      console.log("Notion sync success");
+    }
+  } catch (e) {
+    console.error("Notion sync error (non-blocking):", e);
+  }
+}
+
 // CORS headers for extension requests
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +112,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log("Received meme data:", body);
-    const { text, images, author, url, platform, likes, retweets } = body;
+    const { text, images, author, url, platform, likes, retweets, views, comments, bookmarks } = body;
 
     if (!url) {
       return NextResponse.json(
@@ -44,6 +133,9 @@ export async function POST(request: NextRequest) {
           platform: platform || "twitter",
           likes: likes || 0,
           retweets: retweets || 0,
+          views: views || 0,
+          comments: comments || 0,
+          bookmarks: bookmarks || 0,
           collected_at: new Date().toISOString(),
         },
         {
@@ -60,6 +152,19 @@ export async function POST(request: NextRequest) {
         { status: 500, headers: corsHeaders }
       );
     }
+
+    // Fire-and-forget Notion sync — don't block the response
+    syncToNotion({
+      text,
+      url,
+      author,
+      platform,
+      likes: likes || 0,
+      retweets: retweets || 0,
+      views: views || 0,
+      comments: comments || 0,
+      bookmarks: bookmarks || 0,
+    }).catch((e) => console.error("Notion background sync failed:", e));
 
     console.log("Saved meme:", data);
     return NextResponse.json(

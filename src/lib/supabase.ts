@@ -15,6 +15,9 @@ export interface Meme {
   images: string[];
   likes: number;
   retweets: number;
+  views: number;
+  comments: number;
+  bookmarks: number;
   collected_at: string;
   topics: string[];
   humor_type: string | null;
