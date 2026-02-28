@@ -84,11 +84,13 @@ async function syncToNotion(memeData: {
     if (!response.ok) {
       const err = await response.json();
       console.error("Notion sync failed:", err);
+      throw new Error(`Notion API ${response.status}: ${err?.message || JSON.stringify(err)}`);
     } else {
       console.log("Notion sync success");
     }
   } catch (e) {
-    console.error("Notion sync error (non-blocking):", e);
+    console.error("Notion sync error:", e);
+    throw e;
   }
 }
 
@@ -161,21 +163,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fire-and-forget Notion sync — don't block the response
-    syncToNotion({
-      text,
-      url,
-      author,
-      platform,
-      likes,
-      retweets,
-      views,
-      comments,
-    }).catch((e) => console.error("Notion background sync failed:", e));
+    // Await Notion sync so we can surface errors
+    let notionStatus = "skipped";
+    try {
+      const notionResult = await syncToNotion({
+        text,
+        url,
+        author,
+        platform,
+        likes,
+        retweets,
+        views,
+        comments,
+      });
+      notionStatus = "success";
+    } catch (e: any) {
+      notionStatus = `error: ${e?.message || e}`;
+      console.error("Notion sync failed:", e);
+    }
 
     console.log("Saved meme:", data);
     return NextResponse.json(
-      { success: true, meme: data },
+      { success: true, meme: data, notionSync: notionStatus, notionDbId: NOTION_DATABASE_ID?.substring(0, 8) },
       { headers: corsHeaders },
     );
   } catch (error) {
